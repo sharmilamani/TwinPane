@@ -4,7 +4,7 @@
 
 Twinpane shows you exactly what changed between two text files, two folders, two spreadsheets (CSV), two binary files or two pictures, and lets you merge and sync the differences. It runs entirely on your PC: no account, no internet connection and no telemetry.
 
-> Twinpane is an independent project. It is not affiliated with, endorsed by or based on the code of Beyond Compare or Scooter Software.
+> Twinpane is an independent project.
 
 ---
 
