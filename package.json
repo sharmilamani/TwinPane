@@ -1,0 +1,62 @@
+{
+  "name": "twinpane",
+  "productName": "Twinpane",
+  "version": "1.0.0",
+  "description": "Compare text files, folders, tables, binary files and pictures",
+  "main": "main.js",
+  "author": "Twinpane",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^44.6.0",
+    "electron-builder": "^26.0.18"
+  },
+  "build": {
+    "appId": "com.personal.twinpane",
+    "productName": "Twinpane",
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Twinpane",
+      "include": "build/installer.nsh",
+      "artifactName": "Twinpane-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "Twinpane-${version}-portable.exe"
+    }
+  }
+}
