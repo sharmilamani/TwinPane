@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use TwinPane in your work, please cite it using the metadata below."
+type: software
+title: "TwinPane: A File, Folder, Table, Hex and Picture Comparison Tool for Windows"
+abstract: >-
+  TwinPane is a free, open-source desktop application for Windows that compares
+  text files, folders, CSV tables, binary files and images. It provides
+  side-by-side text diffs with word-level highlighting and block merging,
+  recursive folder comparison and synchronization, key-based table comparison,
+  byte-level hex comparison and pixel-level picture comparison. The text diff
+  is based on Myers' O(ND) difference algorithm.
+authors:
+  - given-names: Sharmila
+    family-names: Mani
+    alias: sharmilamani
+version: 1.0.0
+date-released: 2026-11-22
+license: MIT
+repository-code: "https://github.com/sharmilamani/TwinPane"
+url: "https://github.com/sharmilamani/TwinPane"
+keywords:
+  - diff
+  - file comparison
+  - folder synchronization
+  - merge tool
+  - hex comparison
+  - image comparison
+  - Electron
+  - Windows
+references:
+  - type: article
+    title: "An O(ND) Difference Algorithm and Its Variations"
+    authors:
+      - given-names: Eugene W.
+        family-names: Myers
+    journal: Algorithmica
+    volume: 1
+    start: 251
+    end: 266
+    year: 1986
+    doi: 10.1007/BF01840446

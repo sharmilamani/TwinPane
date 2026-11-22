@@ -28,6 +28,7 @@ Twinpane shows you exactly what changed between two text files, two folders, two
 - [Troubleshooting](#troubleshooting)
 - [Project structure](#project-structure)
 - [Contributing](#contributing)
+- [How to cite](#how-to-cite)
 - [License](#license)
 
 ---
@@ -345,6 +346,36 @@ Bug reports, ideas and pull requests are welcome.
 3. Open a pull request describing what you changed and why.
 
 Ideas for future features: three-way merge, comparing inside zip files, FTP/SFTP folders, and other text encodings.
+
+---
+
+## How to cite
+
+If you use TwinPane in research, teaching material or a project write-up, please cite it. On the repository page, click **Cite this repository** in the right sidebar to copy an APA or BibTeX citation, generated from [`CITATION.cff`](CITATION.cff).
+
+**APA:**
+
+> Mani, S. (2026). *TwinPane: A file, folder, table, hex and picture comparison tool for Windows* (Version 1.0.0) [Computer software]. https://github.com/sharmilamani/TwinPane
+
+**BibTeX** (also in [`CITATION.bib`](CITATION.bib)):
+
+```bibtex
+@software{mani_twinpane_2026,
+  author  = {Mani, Sharmila},
+  title   = {{TwinPane}: A File, Folder, Table, Hex and Picture Comparison Tool for {Windows}},
+  version = {1.0.0},
+  year    = {2026},
+  month   = nov,
+  license = {MIT},
+  url     = {https://github.com/sharmilamani/TwinPane}
+}
+```
+
+If your LaTeX style doesn't support `@software`, use the `@misc` entry in `CITATION.bib` instead.
+
+To cite the diff algorithm TwinPane uses:
+
+> Myers, E. W. (1986). An O(ND) difference algorithm and its variations. *Algorithmica, 1*, 251–266. https://doi.org/10.1007/BF01840446
 
 ---
 

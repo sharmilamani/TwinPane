@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Compare text files, folders, tables, binary files and pictures",
   "main": "main.js",
-  "author": "Twinpane",
+  "author": "Sharmila Mani",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -58,5 +58,10 @@
     "portable": {
       "artifactName": "Twinpane-${version}-portable.exe"
     }
+  },
+  "homepage": "https://github.com/sharmilamani/TwinPane",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sharmilamani/TwinPane.git"
   }
 }
