@@ -15,6 +15,7 @@ Twinpane shows you exactly what changed between two text files, two folders, two
 - [Using Twinpane](#using-twinpane)
   - [Text compare](#text-compare)
   - [Folder compare](#folder-compare)
+  - [Copy and move files](#copy-and-move-files)
   - [Folder sync](#folder-sync)
   - [Table compare](#table-compare)
   - [Hex compare](#hex-compare)
@@ -39,6 +40,7 @@ Twinpane shows you exactly what changed between two text files, two folders, two
 |---|---|
 | **Text compare** | Side-by-side view with changed words highlighted inside each line, an overview bar showing every difference, previous/next navigation, one-click merge of a block in either direction, undo, in-place editing and saving. |
 | **Folder compare** | Recursive tree of two folders showing which files are the same, changed, or exist on one side only. Compare by contents (byte by byte), by size and modified time, or by size only. |
+| **Copy and move** | Tick any files or folders and copy or move them from left to right or right to left. Files that get replaced go to the Recycle Bin first. |
 | **Folder sync** | Preview, then run, a mirror left → right, a mirror right → left, or a two-way update where the newer file wins. Deleted files go to the Recycle Bin. |
 | **Table compare** | Compare CSV, TSV or semicolon-separated files row by row, matched by a key column (like an ID) or by position. Shows changed cells, added and removed rows, and columns that exist on one side only. |
 | **Hex compare** | Byte-by-byte view of binary files with offsets, hex and ASCII columns, and jumping between differences. |
@@ -136,6 +138,35 @@ Each file gets a status:
   - *Size only* is the fastest.
 - **Expand all** and **Collapse all** open or close every subfolder. Click a folder row to open or close just that one.
 - **Click any file** to open the pair in the right viewer: text files in Text compare, pictures in Picture compare, and anything else in Hex compare.
+
+### Copy and move files
+
+Use this to copy or move just the files you pick, instead of syncing whole folders.
+
+1. **Choose files.** Tick the box next to each file you want:
+   - Tick a **folder's** box to select every file in it. A box with a dash means some of its files are selected.
+   - Tick the box in the **header** to select every file currently shown. It respects the filter buttons and the name filter.
+   - **Select differences** selects every shown file that isn't the same on both sides.
+   - With a row focused, <kbd>Space</kbd> ticks or unticks it.
+2. **Choose an action.** Each button shows how many of the selected files it applies to.
+
+   | Button | What happens |
+   |---|---|
+   | **Copy left → right** | Copies the selected files from the left folder into the right folder. The originals stay where they are. |
+   | **Copy right → left** | The same in the other direction. |
+   | **Move left → right** | Moves the selected files into the right folder and removes them from the left folder. |
+   | **Move right → left** | The same in the other direction. |
+
+3. **Confirm.** Twinpane lists what will happen, including how many existing files will be replaced. Click the button to go ahead or **Cancel** to stop.
+
+Things to know:
+
+- Subfolders are created on the other side as needed, so a file in `docs/2026/report.txt` lands in the same place in the other folder.
+- **Replaced files go to the Recycle Bin first**, so you can restore the old version.
+- Copied and moved files keep their original modified time.
+- A selected file that only exists on the destination side is skipped, and Twinpane tells you how many were skipped.
+- When moving between two different drives, Twinpane copies the file, checks the copy is complete and only then removes the original.
+- Copy and move work in the installed Windows app. The web preview lets you select files but can't change them.
 
 ### Folder sync
 
@@ -252,7 +283,8 @@ Then run `git difftool` to open each changed file in Twinpane, or `git difftool 
 | <kbd>Alt</kbd>+<kbd>↑</kbd> | Previous difference (Text compare) |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save every changed side (Text compare) |
 | <kbd>Esc</kbd> | Close an export window |
-| <kbd>Enter</kbd> or <kbd>Space</kbd> | Open the selected file or folder (Folder compare) |
+| <kbd>Enter</kbd> | Open the focused file, or open or close the focused folder (Folder compare) |
+| <kbd>Space</kbd> | Tick or untick the focused row for copy and move (Folder compare) |
 
 ---
 
@@ -262,7 +294,7 @@ Files you compare can come from anywhere, so Twinpane treats their contents as u
 
 - **Access is limited to what you open.** Twinpane only reads and writes files and folders you opened yourself: through a dialog, by drag and drop, from the right-click menu or on the command line. Links and junctions that point outside those folders are refused.
 - **The window is sandboxed.** The interface has no Node.js access and runs in Chromium's sandbox. It loads from a private `app://` address with a strict Content Security Policy that blocks injected scripts. Camera, microphone, location and similar permissions are refused.
-- **Sync always asks first.** The confirmation dialog comes from the desktop part of the app, so the interface can't skip it. Deletions go to the Recycle Bin.
+- **Sync, copy and move always ask first.** The confirmation dialog comes from the desktop part of the app, so the interface can't skip it. Deleted files, and files that get replaced by a copy or move, go to the Recycle Bin.
 - **Nothing leaves your PC.** Twinpane makes no network requests. It remembers your view options, but never the text or file names you compared.
 - **Hardened build.** Electron's debugging and "run as Node" switches are disabled, and the app only loads its own integrity-checked code.
 

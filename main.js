@@ -350,6 +350,77 @@ handle('sync', async ops => {
   return { done, errors, cancelled: false };
 });
 
+// Copy or move the files you selected from one folder into the other.
+// Every path is checked, you confirm in a dialog drawn by this process, and a
+// file that gets replaced goes to the Recycle Bin first so it can be restored.
+handle('fileop', async (mode, toSide, items) => {
+  if (mode !== 'copy' && mode !== 'move') throw new Error('Invalid operation');
+  if (toSide !== 'left' && toSide !== 'right') throw new Error('Invalid operation');
+  if (!Array.isArray(items) || items.length === 0 || items.length > MAX_OPS) throw new Error('Invalid file list');
+  const plan = [];
+  const targets = new Set();
+  for (const it of items) {
+    if (!it || typeof it !== 'object') throw new Error('Invalid file list');
+    const from = await check(it.from);
+    const to = await check(it.to);
+    if (keyOf(await realOf(from)) === keyOf(await realOf(to))) throw new Error(`A file can't be copied onto itself: ${it.from}`);
+    if (targets.has(keyOf(to))) throw new Error(`Two files would be written to the same place: ${it.to}`);
+    targets.add(keyOf(to));
+    if (!(await fsp.lstat(from)).isFile()) throw new Error(`Not a regular file: ${it.from}`);
+    const existing = await fsp.lstat(to).catch(() => null);
+    if (existing && !existing.isFile()) throw new Error(`Can't replace a folder or link with a file: ${it.to}`);
+    plan.push({ from, to, replace: !!existing });
+  }
+  const n = plan.length;
+  const replaced = plan.filter(o => o.replace).length;
+  const fromSide = toSide === 'right' ? 'left' : 'right';
+  const verb = mode === 'move' ? 'Move' : 'Copy';
+  const lines = [];
+  lines.push(`${n} file${n === 1 ? '' : 's'} will be ${mode === 'move' ? 'moved' : 'copied'} from the ${fromSide} folder to the ${toSide} folder.`);
+  if (mode === 'move') lines.push(`They will be removed from the ${fromSide} folder.`);
+  if (replaced) lines.push(`${replaced} existing file${replaced === 1 ? '' : 's'} in the ${toSide} folder will be replaced. The old version${replaced === 1 ? ' goes' : 's go'} to the Recycle Bin.`);
+  const sample = plan.slice(0, 10).map(o => `${o.replace ? 'Replace' : 'New    '}  ${o.to}`).join('\n');
+  const r = await dialog.showMessageBox(win, {
+    type: replaced || mode === 'move' ? 'warning' : 'question',
+    buttons: [`${verb} ${n} file${n === 1 ? '' : 's'}`, 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    message: `${verb} ${n} file${n === 1 ? '' : 's'} to the ${toSide}?`,
+    detail: `${lines.join('\n')}\n\n${sample}${n > 10 ? `\n…and ${n - 10} more` : ''}`,
+  });
+  if (r.response !== 0) return { done: 0, errors: [], cancelled: true };
+
+  let done = 0;
+  const errors = [];
+  for (const op of plan) {
+    try {
+      await fsp.mkdir(path.dirname(op.to), { recursive: true });
+      await check(op.to); // re-check after creating folders, in case a link appeared
+      const st = await fsp.stat(op.from);
+      if (op.replace && (await fsp.lstat(op.to).catch(() => null))) await shell.trashItem(op.to);
+      if (mode === 'move') {
+        try {
+          await fsp.rename(op.from, op.to);
+        } catch (err) {
+          if (err.code !== 'EXDEV') throw err;
+          // Different drive: copy, check the copy, then remove the original.
+          await fsp.copyFile(op.from, op.to, fs.constants.COPYFILE_EXCL);
+          await fsp.utimes(op.to, st.atime, st.mtime);
+          if ((await fsp.stat(op.to)).size !== st.size) throw new Error('The copy is incomplete, so the original was kept');
+          await fsp.unlink(op.from);
+        }
+      } else {
+        await fsp.copyFile(op.from, op.to, fs.constants.COPYFILE_EXCL);
+        await fsp.utimes(op.to, st.atime, st.mtime); // keep the modified time so the next compare matches
+      }
+      done++;
+    } catch (err) {
+      errors.push(`${op.to}: ${err.message}`);
+    }
+  }
+  return { done, errors, cancelled: false };
+});
+
 /* ---------------- start ---------------- */
 
 app.whenReady().then(async () => {

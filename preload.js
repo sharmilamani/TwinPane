@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('native', {
   writeText: (p, text) => inv('writeText', p, text),
   saveDialog: name => inv('saveDialog', name),
   runSync: ops => inv('sync', ops),
+  fileOp: (mode, toSide, items) => inv('fileop', mode, toSide, items),
   // Only real dropped or picked files have a path; files made by script return ''.
   pathOf: file => {
     let p = '';

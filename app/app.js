@@ -213,7 +213,7 @@ document.addEventListener('keydown',e=>{
 });
 
 /* =================== FOLDER COMPARE =================== */
-const F={L:new Map(),R:new Map(),rootL:'',rootR:'',items:[],filter:'all',collapsed:new Set(),sync:'l2r',mode:'content',name:'',busy:0};
+const F={L:new Map(),R:new Map(),rootL:'',rootR:'',items:[],filter:'all',collapsed:new Set(),sync:'l2r',mode:'content',name:'',busy:0,sel:new Set(),visible:[],dirFiles:new Map()};
 function filesToMap(list){const m=new Map();let root='';
   for(const f of list){const p=(f.webkitRelativePath||f.name).split('/');root=p.length>1?p[0]:root;m.set(p.length>1?p.slice(1).join('/'):p[0],f)}
   return{m,root:root||'(files)'}}
@@ -239,7 +239,7 @@ async function compareFolders(){
     items.push({path:p,l,r,st});
     if(++done%25===0)$('#fStat').textContent=`Comparing ${done} of ${paths.length}…`;
   }
-  F.items=items;$('#fNameL').textContent=F.rootL||'—';$('#fNameR').textContent=F.rootR||'—';
+  F.items=items;const have=new Set(paths);F.sel=new Set([...F.sel].filter(p=>have.has(p)));$('#fNameL').textContent=F.rootL||'—';$('#fNameR').textContent=F.rootR||'—';
   renderFolders();
 }
 function globToRe(g){const parts=g.split(/[;,]/).map(s=>s.trim()).filter(Boolean);if(!parts.length)return null;
@@ -251,29 +251,35 @@ function renderFolders(){
   for(const it of F.items){const parts=it.path.split('/');let n=root;
     for(let i=0;i<parts.length-1;i++){let c=n.dirs.get(parts[i]);if(!c){c={name:parts[i],path:parts.slice(0,i+1).join('/'),dirs:new Map(),files:[]};n.dirs.set(parts[i],c)}n=c}
     n.files.push(it)}
-  const agg=d=>{const s={vis:0,diff:0,hasL:false,hasR:false};
-    for(const f of d.files){if(pass(f))s.vis++;if(f.st!=='same')s.diff++;if(f.l)s.hasL=true;if(f.r)s.hasR=true}
-    for(const c of d.dirs.values()){const t=agg(c);s.vis+=t.vis;s.diff+=t.diff;s.hasL||=t.hasL;s.hasR||=t.hasR}return s};
+  F.dirFiles=new Map();F.visible=[];
+  const agg=d=>{if(d.agg)return d.agg;const s={vis:0,diff:0,hasL:false,hasR:false,files:[]};
+    for(const f of d.files){if(pass(f)){s.vis++;s.files.push(f.path)}if(f.st!=='same')s.diff++;if(f.l)s.hasL=true;if(f.r)s.hasR=true}
+    for(const c of d.dirs.values()){const t=agg(c);s.vis+=t.vis;s.diff+=t.diff;s.hasL||=t.hasL;s.hasR||=t.hasR;s.files.push(...t.files)}d.agg=s;return s};
+  const ckState=list=>{const n=list.filter(p=>F.sel.has(p)).length;return n===0?'':n===list.length?' checked':' data-ind="1"'};
   const out=[];const pad=dp=>`style="padding-left:${dp*1.15}em"`;
   const walk=(n,dp)=>{
     for(const d of[...n.dirs.values()].sort((a,b)=>a.name.localeCompare(b.name))){
       const s=agg(d);if(!s.vis)continue;const col=F.collapsed.has(d.path);
       const st=!s.hasL?'<span class="pill ronly">Right only</span>':!s.hasR?'<span class="pill lonly">Left only</span>':s.diff?`<span class="pill dirdiff">${s.diff} differ</span>`:'<span class="pill same">Same</span>';
-      out.push(`<div class="fr dir${col?' collapsed':''}" data-dir="${esc(d.path)}" tabindex="0"><span class="nm" ${pad(dp)}><span class="caret">▾</span><span class="t">${esc(d.name)}/</span></span><span class="num"></span><span class="num dt"></span>${st}<span class="num"></span><span class="num dt"></span></div>`);
+      F.dirFiles.set(d.path,s.files);
+      out.push(`<div class="fr dir${col?' collapsed':''}" data-dir="${esc(d.path)}" tabindex="0"><span class="ck"><input type="checkbox" class="sel" data-seldir="${esc(d.path)}"${ckState(s.files)} aria-label="Select all files in ${esc(d.name)}"></span><span class="nm" ${pad(dp)}><span class="caret">▾</span><span class="t">${esc(d.name)}/</span></span><span class="num"></span><span class="num dt"></span>${st}<span class="num"></span><span class="num dt"></span></div>`);
       if(!col)walk(d,dp+1);
     }
     for(const f of n.files.sort((a,b)=>a.path.localeCompare(b.path))){
       if(!pass(f))continue;const name=f.path.split('/').pop();
       const lab={same:'Same',diff:'Changed',lonly:'Left only',ronly:'Right only'}[f.st];
       let nw='';if(f.st==='diff'&&Math.abs(f.l.lastModified-f.r.lastModified)>=2000)nw=`<span class="newer">${f.l.lastModified>f.r.lastModified?'left':'right'} is newer</span>`;
-      out.push(`<div class="fr${f.l&&f.r?'':' miss'}" data-path="${esc(f.path)}" tabindex="0"><span class="nm" ${pad(dp)}><span class="caret"></span><span class="t" title="${esc(f.path)}">${esc(name)}</span></span><span class="num">${f.l?fmtSize(f.l.size):''}</span><span class="num dt">${f.l?fmtDate(f.l.lastModified):''}</span><span style="justify-self:center"><span class="pill ${f.st}">${lab}</span>${nw}</span><span class="num">${f.r?fmtSize(f.r.size):''}</span><span class="num dt">${f.r?fmtDate(f.r.lastModified):''}</span></div>`);
+      const on=F.sel.has(f.path);
+      out.push(`<div class="fr${f.l&&f.r?'':' miss'}${on?' picked':''}" data-path="${esc(f.path)}" tabindex="0"><span class="ck"><input type="checkbox" class="sel" data-sel="${esc(f.path)}"${on?' checked':''} aria-label="Select ${esc(name)}"></span><span class="nm" ${pad(dp)}><span class="caret"></span><span class="t" title="${esc(f.path)}">${esc(name)}</span></span><span class="num">${f.l?fmtSize(f.l.size):''}</span><span class="num dt">${f.l?fmtDate(f.l.lastModified):''}</span><span style="justify-self:center"><span class="pill ${f.st}">${lab}</span>${nw}</span><span class="num">${f.r?fmtSize(f.r.size):''}</span><span class="num dt">${f.r?fmtDate(f.r.lastModified):''}</span></div>`);
     }
   };
   walk(root,0);
+  F.visible=agg(root).files;
   $('#fList').innerHTML=out.join('')||`<div class="empty">${F.items.length?'No files match this filter.':'Choose a left and a right folder to compare.'}</div>`;
   const c={same:0,diff:0,lonly:0,ronly:0};for(const it of F.items)c[it.st]++;
   $('#fStat').innerHTML=`<b>${F.items.length}</b> files · <b>${c.diff}</b> changed · <b>${c.lonly}</b> left only · <b>${c.ronly}</b> right only · ${c.same} same`;
-  renderPlan();
+  $$('#fList input[data-ind]').forEach(i=>i.indeterminate=true);
+  renderSel();renderPlan();
 }
 function planItems(){
   const P=[];
@@ -302,12 +308,48 @@ $('#fMode').onchange=e=>{F.mode=e.target.value;compareFolders()};
 $('#fName').oninput=debounce(e=>{F.name=e.target.value;renderFolders()},200);
 $('#fExpand').onclick=()=>{F.collapsed.clear();renderFolders()};
 $('#fCollapse').onclick=()=>{for(const it of F.items){const p=it.path.split('/');for(let i=1;i<p.length;i++)F.collapsed.add(p.slice(0,i).join('/'))}renderFolders()};
+/* ---- selection, copy and move ---- */
+function renderSel(){
+  const n=F.sel.size,all=$('#fSelAll'),vis=F.visible,nv=vis.filter(p=>F.sel.has(p)).length;
+  all.checked=vis.length>0&&nv===vis.length;all.indeterminate=nv>0&&nv<vis.length;all.disabled=!vis.length;
+  let onL=0,onR=0;for(const p of F.sel){if(F.L.has(p))onL++;if(F.R.has(p))onR++}
+  $('#fSelN').innerHTML=n?`<b>${n}</b> file${n>1?'s':''} selected · ${onL} on the left · ${onR} on the right`:'No files selected';
+  const ready=!!(N&&F.absL&&F.absR);
+  $$('#fOps [data-op]').forEach(b=>{const k=b.dataset.d==='r'?onL:onR;b.disabled=!ready||!k;
+    b.textContent=b.textContent.replace(/ \(\d+\)$/,'')+(ready&&k?` (${k})`:'')});
+  $('#fSelClear').disabled=!n;
+  $('#fOpsHint').textContent=!N?'Copy and move work in the installed Windows app. Here you can select files to see what would be copied.'
+    :!ready?'Choose a left and a right folder to copy or move files between them.'
+    :n?'Replaced files go to the Recycle Bin first, so you can get them back.':'Tick the files or folders you want, then choose Copy or Move.';
+}
+function setSel(paths,on){for(const p of paths){if(on)F.sel.add(p);else F.sel.delete(p)}renderFolders()}
+$('#fSelAll').onchange=e=>setSel(F.visible,e.target.checked);
+$('#fSelClear').onclick=()=>{F.sel.clear();renderFolders()};
+$('#fSelDiff').onclick=()=>setSel(F.visible.filter(p=>{const it=F.items.find(x=>x.path===p);return it&&it.st!=='same'}),true);
+$('#fList').addEventListener('change',e=>{const i=e.target.closest('input.sel');if(!i)return;
+  if(i.dataset.sel!=null)setSel([i.dataset.sel],i.checked);else setSel(F.dirFiles.get(i.dataset.seldir)||[],i.checked)});
+async function fileOp(mode,d){
+  const toRight=d==='r',src=toRight?F.L:F.R,root=toRight?F.absR:F.absL;
+  const sep=root.includes('\\')?'\\':'/',jp=p=>root+sep+p.split('/').join(sep);
+  const items=[];let skipped=0;
+  for(const p of[...F.sel].sort()){const f=src.get(p);if(!f){skipped++;continue}items.push({from:f.abs,to:jp(p)})}
+  if(!items.length){toast(`None of the selected files are in the ${toRight?'left':'right'} folder.`);return}
+  let res;try{res=await N.fileOp(mode,toRight?'right':'left',items)}catch(e){toast(`${mode==='move'?'Move':'Copy'} stopped: ${e.message}`);return}
+  if(res.cancelled)return;
+  const verb=mode==='move'?'Moved':'Copied',skip=skipped?` · ${skipped} skipped (not on the ${toRight?'left':'right'})`:'';
+  toast(res.errors.length?`${verb} ${res.done}, ${res.errors.length} failed: ${res.errors[0]}`:`${verb} ${res.done} file${res.done===1?'':'s'} to the ${toRight?'right':'left'}${skip}`);
+  if(!res.errors.length)F.sel.clear();
+  await scanSide('L',F.absL);await scanSide('R',F.absR);await compareFolders();
+}
+$('#fOps').addEventListener('click',e=>{const b=e.target.closest('[data-op]');if(b&&!b.disabled)fileOp(b.dataset.op,b.dataset.d)});
 function folderActivate(e){
+  if(e.target.closest('.ck'))return;
   const d=e.target.closest('[data-dir]');if(d){const p=d.dataset.dir;F.collapsed.has(p)?F.collapsed.delete(p):F.collapsed.add(p);renderFolders();return}
   const f=e.target.closest('[data-path]');if(f)openPair(f.dataset.path);
 }
 $('#fList').addEventListener('click',folderActivate);
-$('#fList').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();folderActivate(e)}});
+$('#fList').addEventListener('keydown',e=>{if(e.target.matches('input'))return;if(e.key==='Enter'){e.preventDefault();folderActivate(e)}
+  else if(e.key===' '){e.preventDefault();const r=e.target.closest('.fr'),i=r&&r.querySelector('input.sel');if(i){i.checked=!i.checked;i.dispatchEvent(new Event('change',{bubbles:true}))}}});
 const IMG_EXT=['png','jpg','jpeg','gif','webp','bmp','avif'];
 async function isText(f){if(!f)return true;const b=new Uint8Array(await f.slice(0,8000).arrayBuffer());return!b.includes(0)}
 async function openPair(path){
